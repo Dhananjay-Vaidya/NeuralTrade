@@ -1,0 +1,14 @@
+python==3.8
+numpy
+pandas
+matplotlib
+seaborn
+plotly
+gym
+stable-baselines3
+torch
+yfinance
+ta 
+streamlit
+joblib
+scikit-learn
