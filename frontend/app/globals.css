@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --background: #0d0d14;
+  --surface: #13131f;
+  --card: #181825;
+  --foreground: #e2e8f0;
+  --muted-foreground: #6b7280;
+  --card-foreground: #e2e8f0;
+}
+
+.light {
+  --background: #f8fafc;
+  --surface: #f1f5f9;
+  --card: #ffffff;
+  --foreground: #0f172a;
+  --muted-foreground: #64748b;
+  --card-foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card-foreground: var(--card-foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  height: 100%;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }

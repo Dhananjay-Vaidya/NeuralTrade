@@ -1,0 +1,41 @@
+data:
+  tickers: ["AAPL", "MSFT", "GOOGL"]
+  primary_ticker: "AAPL"
+  start_date: "2019-01-01"
+  end_date: "2024-01-01"
+  raw_path: "data/stock_data1.csv"
+  clean_path: "data/clean_stock_data.csv"
+  engineered_path: "data/engineered_stock_data.csv"
+  train_ratio: 0.7
+  val_ratio: 0.15
+  # test_ratio is implicit: 1 - train_ratio - val_ratio = 0.15
+
+model:
+  save_path: "model/ppo_trading_model.zip"
+  algorithm: "PPO"          # PPO | RecurrentPPO
+  total_timesteps: 50000
+  seed: 42
+  policy: "MlpPolicy"
+  learning_rate: 3.0e-4
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+
+env:
+  initial_cash: 10000.0
+  transaction_cost_bps: 10       # basis points per trade (both sides)
+  slippage_bps: 5                # basis points slippage per trade
+  sizing: "all_in"               # all_in | fixed_fraction
+  fixed_fraction: 0.25           # fraction of portfolio used when sizing=fixed_fraction
+  reward_type: "log_return"      # log_return | risk_adjusted
+  risk_adjusted_drawdown_penalty: 0.1
+
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "neuraltrade"

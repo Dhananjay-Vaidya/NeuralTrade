@@ -1,0 +1,9 @@
+artifact_location: file:C:/Users/Dhananjay Vaidya/Downloads/NeuralTrade/mlruns/187984346289927680
+creation_time: 1780950941681
+effective_trace_archival_retention: null
+experiment_id: '187984346289927680'
+last_update_time: 1780950941681
+lifecycle_stage: active
+name: neuraltrade
+trace_location: null
+workspace: default
