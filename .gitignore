@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+
+# --- Secrets / local config ---
+.env
+.env.*
+.claude/settings.local.json
+
+# --- Experiment tracking (local MLflow runs) ---
+mlruns/
+mlartifacts/
+
+# --- Streamlit ---
+.streamlit/secrets.toml
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Node (frontend/ has its own .gitignore too) ---
+node_modules/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Note: data/, model/ and results/ are intentionally tracked. They are small,
+# app.py needs the trained model, and the README shows results/equity_curve.png.
