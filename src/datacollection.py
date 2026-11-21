@@ -1,28 +1,42 @@
-import yfinance as yf
-import pandas as pd
+"""Download real daily OHLCV data from Yahoo Finance.
+
+Usage: python src/datacollection.py
+"""
+
 import time
 
-stock_symbols = ["AAPL", "MSFT", "GOOGL"]
+import yfinance as yf
 
-def download_data(ticker):
-    """Download stock data with retries in case of failure."""
-    for i in range(3):  # Retry up to 3 times
+from common import DATA_DIR, END_DATE, PRICE_COLUMNS, START_DATE, TICKER, raw_path
+
+
+def download_ohlcv(ticker, retries=3):
+    for attempt in range(1, retries + 1):
         try:
-            stock_data = yf.download(ticker, start="2019-01-01", end="2024-01-01", auto_adjust=True, progress=False)
-            return stock_data
-        except Exception as e:
-            print(f"Retry {i+1}: Failed to download {ticker} due to {e}")
-            time.sleep(2)  # Wait before retrying
-    return None  # Return None if all retries fail
+            df = yf.download(
+                ticker,
+                start=START_DATE,
+                end=END_DATE,
+                auto_adjust=True,
+                progress=False,
+                multi_level_index=False,
+            )
+            if not df.empty:
+                return df
+            print(f"Attempt {attempt}: empty response for {ticker}")
+        except Exception as e:  # network errors etc.
+            print(f"Attempt {attempt}: failed to download {ticker}: {e}")
+        time.sleep(2)
+    raise RuntimeError(f"Could not download data for {ticker}")
 
-# Fetch data for each stock separately
-data_dict = {ticker: download_data(ticker) for ticker in stock_symbols}
 
-# Combine into a single DataFrame using "Close" prices
-data = pd.concat({k: v["Close"] for k, v in data_dict.items()}, axis=1)
+def main():
+    DATA_DIR.mkdir(exist_ok=True)
+    df = download_ohlcv(TICKER)[PRICE_COLUMNS].dropna()
+    df.index.name = "Date"
+    df.to_csv(raw_path())
+    print(f"Saved {len(df)} rows ({df.index[0].date()} to {df.index[-1].date()}) to {raw_path()}")
 
-# Display the first few rows
-print(data.head())
 
-# Save to CSV
-data.to_csv("data/stock_data1.csv")
+if __name__ == "__main__":
+    main()

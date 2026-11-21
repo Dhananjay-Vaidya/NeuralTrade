@@ -1,65 +1,82 @@
-import gym
+"""Single-asset, long-only daily trading environment (gymnasium API).
+
+Timing: at step t the agent sees indicators computed from data up to close t,
+trades at close t, and is rewarded with the log change in portfolio value from
+close t to close t+1. No look-ahead.
+"""
+
+import gymnasium as gym
 import numpy as np
-import pandas as pd
-from gym import spaces
+from gymnasium import spaces
+
+from common import INITIAL_CASH, TRANSACTION_COST
+
+HOLD, BUY, SELL = 0, 1, 2
+
 
 class TradingEnv(gym.Env):
-    def __init__(self, df):
-        super(TradingEnv, self).__init__()
-        
-        # Debug: Print the initial columns
-        print("Columns in df passed to TradingEnv:", df.columns, flush=True)
+    metadata = {"render_modes": []}
 
-        self.df = df.copy()  # Avoid modifying the original dataframe
-        self.current_step = 0
+    def __init__(self, df, norm_stats, initial_cash=INITIAL_CASH, transaction_cost=TRANSACTION_COST):
+        super().__init__()
+        cols = norm_stats["feature_columns"]
+        mean = np.array([norm_stats["mean"][c] for c in cols])
+        std = np.array([norm_stats["std"][c] for c in cols])
 
-        # Ensure 'Date' is not present
-        if 'Date' in self.df.columns:
-            self.df = self.df.drop(columns=['Date'])
+        self.dates = df.index
+        self.prices = df["Close"].to_numpy(dtype=np.float64)
+        self.features = ((df[cols].to_numpy(dtype=np.float64) - mean) / std).astype(np.float32)
+        self.initial_cash = initial_cash
+        self.transaction_cost = transaction_cost
 
-        # Assign num_features dynamically
-        self.num_features = len(self.df.columns)
+        self.action_space = spaces.Discrete(3)  # 0=hold, 1=buy (all-in), 2=sell (go flat)
+        self.observation_space = spaces.Box(
+            low=-np.inf, high=np.inf, shape=(len(cols) + 2,), dtype=np.float32
+        )
 
-        # Debugging: Check if we have the expected number of features
-        print(f"Final columns after processing: {self.df.columns}", flush=True)
-        print(f"Final shape after processing: {self.df.shape}", flush=True)
+    def _portfolio_value(self):
+        return self.cash + self.shares * self.prices[self.t]
 
-        assert self.num_features == 17, f"Expected 17 features, but got {self.num_features}"
+    def _obs(self):
+        pv = self._portfolio_value()
+        extra = np.array([float(self.shares > 0), self.cash / pv], dtype=np.float32)
+        return np.concatenate([self.features[self.t], extra])
 
-        # Define action & observation spaces
-        self.action_space = spaces.Discrete(3)  # Buy, Hold, Sell
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(17,), dtype=np.float32)
+    def _info(self, trade=False):
+        return {
+            "step": self.t,
+            "portfolio_value": self._portfolio_value(),
+            "position": int(self.shares > 0),
+            "price": self.prices[self.t],
+            "trade": trade,
+        }
 
-    def reset(self):
-        self.current_step = 0
-        print(f"Resetting environment... Step set to {self.current_step}", flush=True)
-        return self._next_observation()
-
-    def _next_observation(self):
-        print(f"Fetching next observation at step {self.current_step}...", flush=True)
-        
-        # Extract observation without assuming "Date" column
-        obs = self.df.iloc[self.current_step].values
-        obs = np.array(obs, dtype=np.float32)
-
-        # Debug: Ensure shape is correct
-        print(f"Observation Shape: {obs.shape}\nObservation: {obs}", flush=True)
-
-        if obs.shape[0] != 17:
-            raise ValueError(f"Unexpected observation shape: {obs.shape}, expected (17,)")
-
-        return obs
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        self.t = 0
+        self.cash = self.initial_cash
+        self.shares = 0.0
+        return self._obs(), self._info()
 
     def step(self, action):
-        print(f"Performing action {action} at step {self.current_step}...", flush=True)
+        action = int(action)
+        price = self.prices[self.t]
+        value_before = self._portfolio_value()
 
-        self.current_step += 1
-        done = self.current_step >= len(self.df) - 1
+        trade = False
+        if action == BUY and self.shares == 0:
+            self.shares = self.cash * (1 - self.transaction_cost) / price
+            self.cash = 0.0
+            trade = True
+        elif action == SELL and self.shares > 0:
+            self.cash = self.shares * price * (1 - self.transaction_cost)
+            self.shares = 0.0
+            trade = True
 
-        reward = np.random.randn()  # Placeholder reward calculation
-        obs = self._next_observation()
-
-        return obs, reward, done, {}
-
-    def render(self, mode="human"):
-        pass
+        self.t += 1
+        value_after = self._portfolio_value()
+        reward = float(np.log(value_after / value_before))
+        terminated = self.t >= len(self.prices) - 1
+        info = self._info(trade)
+        info["action"] = action
+        return self._obs(), reward, terminated, False, info

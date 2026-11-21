@@ -4,19 +4,19 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: "default" | "buy" | "sell" | "hold" | "destructive";
 }
 
-const variantClass = {
-  default: "bg-white/10 text-foreground",
-  buy: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
-  sell: "bg-red-500/20 text-red-400 border border-red-500/30",
-  hold: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30",
-  destructive: "bg-red-500/20 text-red-400 border border-red-500/30",
+const variantClass: Record<NonNullable<BadgeProps["variant"]>, string> = {
+  default:     "bg-white/8 text-foreground border border-white/10",
+  buy:         "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+  sell:        "bg-red-500/15 text-red-400 border border-red-500/25",
+  hold:        "bg-amber-500/15 text-amber-400 border border-amber-500/25",
+  destructive: "bg-red-500/15 text-red-400 border border-red-500/25",
 };
 
 export function Badge({ className, variant = "default", ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold leading-none",
         variantClass[variant],
         className
       )}

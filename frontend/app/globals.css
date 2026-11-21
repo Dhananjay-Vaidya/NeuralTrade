@@ -2,45 +2,191 @@
 
 /* ── Design tokens ────────────────────────────────────────────────────────── */
 :root {
-  --background: #0d0d14;
-  --surface: #13131f;
-  --card: #181825;
-  --foreground: #e2e8f0;
-  --muted-foreground: #6b7280;
-  --card-foreground: #e2e8f0;
+  /* Surfaces */
+  --background:       #080810;
+  --surface:          #0e0e1a;
+  --card:             #12121f;
+  --card-elevated:    #16162a;
+  --surface-hover:    rgba(255,255,255,0.04);
+
+  /* Text */
+  --foreground:       #e4e8f0;
+  --muted-foreground: #5a6175;
+  --subtle-foreground:#3a4055;
+
+  /* Borders */
+  --border:           rgba(255,255,255,0.07);
+  --border-hover:     rgba(255,255,255,0.14);
+  --border-accent:    rgba(99,102,241,0.35);
+
+  /* Semantic accents */
+  --accent:           #6366f1;
+  --accent-muted:     rgba(99,102,241,0.15);
+  --accent-glow:      rgba(99,102,241,0.25);
+  --emerald:          #10b981;
+  --emerald-muted:    rgba(16,185,129,0.12);
+  --red:              #ef4444;
+  --red-muted:        rgba(239,68,68,0.12);
+  --amber:            #f59e0b;
+  --orange:           #f97316;
+
+  /* Typography */
+  --card-foreground:  #e4e8f0;
+
+  /* Motion — matched to lib/motion.ts */
+  --ease-out:         cubic-bezier(0.0, 0.0, 0.2, 1.0);
+  --dur-fast:         120ms;
+  --dur-base:         200ms;
+  --dur-slow:         320ms;
 }
 
 .light {
-  --background: #f8fafc;
-  --surface: #f1f5f9;
-  --card: #ffffff;
-  --foreground: #0f172a;
+  --background:       #f4f6fb;
+  --surface:          #edf0f7;
+  --card:             #ffffff;
+  --card-elevated:    #f8faff;
+  --surface-hover:    rgba(0,0,0,0.03);
+  --foreground:       #0f172a;
   --muted-foreground: #64748b;
-  --card-foreground: #0f172a;
+  --subtle-foreground:#94a3b8;
+  --border:           rgba(0,0,0,0.08);
+  --border-hover:     rgba(0,0,0,0.16);
+  --border-accent:    rgba(99,102,241,0.3);
+  --accent-muted:     rgba(99,102,241,0.1);
+  --accent-glow:      rgba(99,102,241,0.18);
+  --emerald-muted:    rgba(16,185,129,0.08);
+  --red-muted:        rgba(239,68,68,0.08);
+  --card-foreground:  #0f172a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-card-foreground: var(--card-foreground);
+  --color-background:        var(--background);
+  --color-surface:           var(--surface);
+  --color-card:              var(--card);
+  --color-card-elevated:     var(--card-elevated);
+  --color-foreground:        var(--foreground);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-card-foreground:   var(--card-foreground);
+  --color-border:            var(--border);
+  --color-border-hover:      var(--border-hover);
+  --color-border-accent:     var(--border-accent);
+  --color-accent:            var(--accent);
+  --color-accent-muted:      var(--accent-muted);
+  --color-accent-glow:       var(--accent-glow);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-html,
-body {
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+html, body {
   height: 100%;
   background-color: var(--background);
   color: var(--foreground);
 }
 
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 99px;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+/* ── Focus ring ──────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+/* ── Shimmer keyframe (used by skeleton) ─────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 0%,
+    rgba(255,255,255,0.09) 40%,
+    rgba(255,255,255,0.04) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+.light .shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.04) 0%,
+    rgba(0,0,0,0.09) 40%,
+    rgba(0,0,0,0.04) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Glow pulse (used by status dots) ───────────────────────────────────── */
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 0 0 currentColor; }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
+}
+
+.glow-dot {
+  animation: glow-pulse 2.4s ease-in-out infinite;
+}
+
+/* ── Noise texture overlay (fixed, pointer-events-none, no scroll cost) ─── */
+
+.noise-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* ── Number tabular alignment ────────────────────────────────────────────── */
+
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ── Card glass effect ───────────────────────────────────────────────────── */
+
+.card-glass {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 4px 24px rgba(0,0,0,0.3);
+  transition: border-color var(--dur-base) var(--ease-out),
+              box-shadow    var(--dur-base) var(--ease-out);
+}
+
+.card-glass:hover {
+  border-color: var(--border-hover);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ── Chart axis / grid shared style ─────────────────────────────────────── */
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical   line {
+  stroke: rgba(255,255,255,0.04);
+}
+
+.recharts-text { fill: var(--muted-foreground); }

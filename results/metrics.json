@@ -1,0 +1,23 @@
+{
+  "ticker": "AAPL",
+  "test_period": [
+    "2023-01-03",
+    "2024-12-31"
+  ],
+  "agent": {
+    "total_return_pct": 77.33802585961965,
+    "sharpe": 1.5958985560994978,
+    "max_drawdown_pct": -15.46096797405222,
+    "num_trades": 27,
+    "win_rate_pct": 42.857142857142854,
+    "final_value": 177338.02585961964
+  },
+  "buy_and_hold": {
+    "total_return_pct": 102.1270869873768,
+    "sharpe": 1.7668726185126866,
+    "max_drawdown_pct": -16.606661445564853,
+    "num_trades": 1,
+    "win_rate_pct": 100.0,
+    "final_value": 202127.08698737682
+  }
+}

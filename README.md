@@ -1,135 +1,102 @@
-AI-Powered Stock Trading System
+# NeuralTrade — PPO Stock Trading Agent
 
-# AI-Powered Stock Trading System  
-
-![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Streamlit](https://img.shields.io/badge/streamlit-app-red)
 ![Stable-Baselines3](https://img.shields.io/badge/RL-Stable%20Baselines3-orange)
+![Gymnasium](https://img.shields.io/badge/env-Gymnasium-blue)
 ![Yahoo Finance](https://img.shields.io/badge/Data-YahooFinance-blue)
-![Last Commit](https://img.shields.io/github/last-commit/yourusername/ai-trading-bot)
-![Issues](https://img.shields.io/github/issues/yourusername/ai-trading-bot)
-![Forks](https://img.shields.io/github/forks/yourusername/ai-trading-bot?style=social)
-![Stars](https://img.shields.io/github/stars/yourusername/ai-trading-bot?style=social)
-![Contributions](https://img.shields.io/badge/contributions-welcome-blue)
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
+A reinforcement-learning trading agent (PPO, Stable-Baselines3) that trades a single stock on daily bars,
+trained on 2019–2022 and evaluated out-of-sample on 2023–2024 against a buy-and-hold baseline.
 
-Table of Contents
+> Research / backtesting project only. Not financial advice.
 
-Project Description
-Motivation
-Problem Statement
-Technologies Used
-Current Features
-Installation
-Usage
-Dataset
-Contributing
-Author
-License
+## How it works
 
+- **Data**: real daily OHLCV from Yahoo Finance (`yfinance`), 2019-01-01 to 2025-01-01. Ticker is set by `TICKER` in [src/common.py](src/common.py) (`AAPL` by default; `MSFT`/`GOOGL` also work).
+- **Features**: SMA10/50, EMA20, RSI14, MACD/signal/histogram, Bollinger bands (+%B), ATR14, ADX14, computed from real High/Low/Close. Price-level indicators are expressed relative to the close price so they are comparable across years.
+- **Environment** ([src/environment.py](src/environment.py), Gymnasium API):
+  - $100,000 starting cash; actions `0 = hold`, `1 = buy` (go all-in long), `2 = sell` (go flat). No shorting.
+  - 0.1% transaction cost per trade.
+  - Reward = `log(portfolio_value_t / portfolio_value_{t-1})`.
+  - Observation = indicator features z-scored with **train-set** mean/std + `[position flag, cash fraction]`.
+  - Trades execute at the close of the day the agent observes; reward comes from the next day's move (no look-ahead).
+- **Split by date**: train 2019–2022, test 2023–2024. Normalisation stats are saved next to the model.
+- **Training**: PPO `MlpPolicy`, `seed=42`, 200k timesteps by default.
 
-Project Description
+## Installation
 
-The AI-Powered Stock Trading System is an advanced trading bot that uses Reinforcement Learning (PPO algorithm) to make automated buy/sell/hold decisions. The system is trained using historical stock data and deployed with a Streamlit dashboard for real-time monitoring of trading performance.
-
-
-Motivation
-
-Financial markets are complex, and making profitable trades requires intelligent decision-making. This project applies Deep Reinforcement Learning to simulate and execute optimal trading strategies without human intervention.
-
-
-Problem Statement
-
-The system is designed to address:
-Automating trading strategies using AI & RL
-Training an RL model to optimize trading performance
-Evaluating the bot’s performance using historical stock data
-Providing a Streamlit dashboard for trade visualization
-
-
-Technologies Used
-This project is built using:
-
-Python – Core programming language
-Stable-Baselines3 (PPO Algorithm) – Reinforcement Learning framework
-Gym – Environment for RL model training
-Yahoo Finance API (yfinance) – Fetching real-time stock data
-TA (Technical Analysis) – Generating indicators (RSI, MACD, Bollinger Bands)
-Pandas & NumPy – Data handling and preprocessing
-Matplotlib & Plotly – Visualization of stock trends & trading actions
-Streamlit – Web-based interactive dashboard
-
-
-Current Features
-Real-time stock data collection from Yahoo Finance
-Feature engineering with advanced technical indicators
-Trading environment simulation using Gym
-Deep Reinforcement Learning (PPO Algorithm) for trading decisions
-Trading performance evaluation using cumulative rewards
-Streamlit dashboard for trade monitoring
-
-
-Installation
-To install and set up the project, follow these steps:
-
-1️⃣ Clone the Repository
-
+```bash
 git clone https://github.com/Dhananjay-Vaidya/NeuralTrade.git
-cd ai-trading-bot
-
-2️⃣ Create a Virtual Environment 
+cd NeuralTrade
 python -m venv venv
-source venv/bin/activate  
-# On Windows: venv\Scripts\activat
-
-3️⃣ Install Dependencies
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+```
 
+## Usage
 
-Usage
+Run the pipeline in this order from the repo root:
 
-1️⃣ Fetch Stock Data
-python src/datacollection.py
+```bash
+python src/datacollection.py          # -> data/raw_AAPL.csv
+python src/feature_engineering.py     # -> data/features_AAPL.csv
+python src/train_rl_model.py          # -> model/ppo_AAPL.zip + model/ppo_AAPL_norm.json
+                                      #    (optional: --timesteps 500000)
+python src/evaluation.py              # -> results/metrics.json + results/equity_curve.png
+streamlit run app.py                  # dashboard: equity curve, trades, metrics
+```
 
-2️⃣ Clean & Preprocess Data
-python src/data_cleaning.py
+The dashboard loads the trained model and the test period automatically. You can optionally upload a raw
+OHLCV CSV (`Date,Open,High,Low,Close,Volume`) to backtest on other data.
 
-3️⃣ Apply Feature Engineering
-python src/feature_engineering.py
+## Results
 
-4️⃣ Train the RL Model
-python src/train_rl_model.py
+AAPL, out-of-sample test period **2023-01-03 to 2024-12-31**, $100,000 starting capital, 0.1% cost per trade
+(from `results/metrics.json`):
 
-5️⃣ Evaluate the Model
-python src/evaluation.py
+| Metric                 | PPO agent | Buy & hold |
+|------------------------|----------:|-----------:|
+| Total return           |   +77.34% |   +102.13% |
+| Sharpe (annualised)    |      1.60 |       1.77 |
+| Max drawdown           |   −15.46% |    −16.61% |
+| Number of trades       |        27 |          1 |
+| Win rate (round trips) |     42.9% |     100.0% |
+| Final value            |  $177,338 |   $202,127 |
 
-6️⃣ Run the Streamlit Dashboard
-streamlit run app.py
+![Equity curve](results/equity_curve.png)
 
-This will launch a web-based dashboard to visualize trading actions and portfolio growth.
+**The agent underperforms buy-and-hold** on the test period: lower return and lower Sharpe, with a slightly
+smaller drawdown. It tracks buy-and-hold closely through mid-2024 but sat partly in cash during AAPL's
+late-2024 rally. On the training period it reached a log-return of ~2.2 vs ~1.07 for buy-and-hold, which
+points to overfitting to 2019–2022 rather than a transferable edge.
 
+**Limitations**: single asset, daily bars, a single train/test split, fixed 0.1% cost with no slippage or
+market-impact model, and a strongly trending test period that favours buy-and-hold.
 
-Dataset
+## Project layout
 
-The system collects historical stock data using the Yahoo Finance API and preprocesses it for Reinforcement Learning.
+```
+src/common.py               settings (ticker, dates, paths) + data/split/normalisation helpers
+src/datacollection.py       download OHLCV
+src/feature_engineering.py  technical indicators
+src/environment.py          Gymnasium trading environment
+src/train_rl_model.py       PPO training
+src/evaluation.py           test-period backtest, metrics, equity plot
+app.py                      Streamlit dashboard
+```
 
-Raw data: data/stock_data1.csv
-Cleaned data: clean_stock_data.csv
-Feature-engineered data: engineered_stock_data.csv
+`src/neuraltrade/`, `api/` and `tests/` contain a separate, more configurable package version (FastAPI backend
+for the `frontend/`), configured via `config.yaml`.
 
+## Contributing
 
-Contributing
-Contributions are welcome! To contribute:
+1. Fork the repository
+2. Create a branch (`git checkout -b feature-name`)
+3. Commit your changes and push
+4. Open a pull request
 
-Fork the repository
-Create a new branch (git checkout -b feature-name)
-Make changes and commit (git commit -m "Description of changes")
-Push to GitHub (git push origin feature-name)
-Submit a pull request for review
+## License
 
-
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
-
+MIT License. See the LICENSE file for details.

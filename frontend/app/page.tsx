@@ -1,67 +1,97 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, ServerCrash, BarChart2 } from "lucide-react";
 import { TopBar } from "@/components/layout/TopBar";
 import { Dashboard } from "@/components/Dashboard";
 import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { useBacktest, useTickers } from "@/hooks/useBacktest";
 import { type BacktestResponse } from "@/lib/api";
-import { AlertTriangle, ServerCrash } from "lucide-react";
+import { fadeVariants } from "@/lib/motion";
+
+// ── Disclaimer banner ─────────────────────────────────────────────────────────
 
 function DisclaimerBanner() {
   return (
     <div
       role="alert"
       aria-live="polite"
-      className="flex items-center gap-2 border-b border-amber-500/20 bg-amber-500/5 px-4 py-2 text-xs text-amber-400"
+      className="flex items-center gap-2 border-b border-amber-500/15 bg-amber-500/4 px-4 py-2 text-xs text-amber-400/80"
     >
       <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span>
-        <strong>Research &amp; backtesting only.</strong> This tool simulates past performance
-        of a trained RL policy. It is <strong>not financial advice</strong> and does not
+        <strong className="font-semibold text-amber-400">Research &amp; backtesting only.</strong>{" "}
+        Simulates past performance of a trained RL policy. Not financial advice and does not
         guarantee future results.
       </span>
     </div>
   );
 }
 
+// ── Error state ───────────────────────────────────────────────────────────────
+
 function ErrorState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-      <ServerCrash className="h-12 w-12 text-red-400/60" aria-hidden />
-      <p className="text-sm text-muted-foreground">Failed to load backtest data</p>
-      <p className="max-w-sm rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-2 font-mono text-xs text-red-400">
+    <motion.div
+      className="flex flex-col items-center justify-center gap-4 py-24 text-center"
+      variants={fadeVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/8">
+        <ServerCrash className="h-6 w-6 text-red-400/70" aria-hidden />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-foreground">Failed to load backtest data</p>
+        <p className="text-xs text-muted-foreground">Check that the API server is running</p>
+      </div>
+      <p className="max-w-sm rounded-lg border border-red-500/15 bg-red-500/5 px-4 py-2.5 font-mono text-xs text-red-400/90">
         {message}
       </p>
       <p className="text-xs text-muted-foreground">
-        Make sure the API server is running:{" "}
-        <code className="rounded bg-white/10 px-1">uvicorn api.main:app --reload --port 8000</code>
+        <code className="rounded bg-white/8 px-1.5 py-0.5 font-mono text-[11px]">
+          uvicorn api.main:app --reload --port 8000
+        </code>
       </p>
-    </div>
+    </motion.div>
   );
 }
 
+// ── Empty state ───────────────────────────────────────────────────────────────
+
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-      <div className="text-4xl">📈</div>
-      <p className="text-sm font-medium text-foreground">Select a ticker and run a backtest</p>
-      <p className="text-xs text-muted-foreground">
-        Choose a ticker and date range above, then click{" "}
-        <strong>Run Backtest</strong> to see results.
-      </p>
-    </div>
+    <motion.div
+      className="flex flex-col items-center justify-center gap-4 py-24 text-center"
+      variants={fadeVariants}
+      initial="hidden"
+      animate="visible"
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/8">
+        <BarChart2 className="h-6 w-6 text-indigo-400/70" aria-hidden />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium text-foreground">Select a ticker and run a backtest</p>
+        <p className="max-w-xs text-xs text-muted-foreground">
+          Choose a ticker and date range above, then click{" "}
+          <strong className="text-foreground/70">Run Backtest</strong> to see results.
+        </p>
+      </div>
+    </motion.div>
   );
 }
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { data: tickerData } = useTickers();
   const primaryTicker = tickerData?.primary ?? "AAPL";
 
-  const [ticker, setTicker] = useState(primaryTicker);
+  const [ticker, setTicker]       = useState(primaryTicker);
   const [startDate, setStartDate] = useState("2022-01-01");
-  const [endDate, setEndDate] = useState("2024-01-01");
-  const [params, setParams] = useState<{ ticker: string; start: string; end: string } | null>(null);
+  const [endDate, setEndDate]     = useState("2024-01-01");
+  const [params, setParams]       = useState<{ ticker: string; start: string; end: string } | null>(null);
 
   function handleRun() {
     setParams({ ticker, start: startDate, end: endDate });
@@ -69,8 +99,6 @@ export default function HomePage() {
 
   const { data, isLoading, isError, error } = useBacktest(params);
 
-  // Retain the last successfully loaded data while a new fetch is in flight so
-  // the chart stays mounted and updates in-place instead of unmounting/remounting.
   const prevDataRef = useRef<BacktestResponse | null>(null);
   if (data) prevDataRef.current = data;
   const displayData = data ?? prevDataRef.current;
@@ -95,12 +123,32 @@ export default function HomePage() {
         id="main-content"
         aria-label="Dashboard"
       >
-        {showSkeleton && <DashboardSkeleton />}
-        {showError    && <ErrorState message={(error as Error).message} />}
-        {!params && !displayData && <EmptyState />}
+        <AnimatePresence mode="wait" initial={false}>
+          {showSkeleton && (
+            <motion.div key="skeleton" variants={fadeVariants} initial="hidden" animate="visible" exit="exit">
+              <DashboardSkeleton />
+            </motion.div>
+          )}
+          {showError && (
+            <motion.div key="error" variants={fadeVariants} initial="hidden" animate="visible" exit="exit">
+              <ErrorState message={(error as Error).message} />
+            </motion.div>
+          )}
+          {!params && !displayData && (
+            <motion.div key="empty" variants={fadeVariants} initial="hidden" animate="visible" exit="exit">
+              <EmptyState />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {displayData && (
-          // opacity signals loading state without unmounting the chart subtree
-          <div className={isLoading ? "pointer-events-none opacity-50 transition-opacity" : "transition-opacity"}>
+          <div
+            className={
+              isLoading
+                ? "pointer-events-none opacity-50 transition-opacity duration-200"
+                : "transition-opacity duration-200"
+            }
+          >
             <Dashboard data={displayData} />
           </div>
         )}

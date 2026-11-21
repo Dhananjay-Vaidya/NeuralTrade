@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -18,30 +19,30 @@ import { type EquityPoint } from "@/lib/chartData";
 
 interface Props {
   data: EquityPoint[];
-  /** Date-keyed drawdown values, used to add drawdown row to the shared tooltip. */
   drawdownMap: Map<string, number>;
+  /** Override height (px). Defaults to 240. */
+  height?: number;
 }
 
-// ── Hoisted constants (stable identity across renders) ────────────────────────
+// ── Hoisted style constants ───────────────────────────────────────────────────
 
 const TOOLTIP_STYLE = {
-  background: "#1e1e2e",
-  border: "1px solid rgba(255,255,255,0.1)",
-  borderRadius: "8px",
+  background: "#0e0e1a",
+  border: "1px solid rgba(255,255,255,0.09)",
+  borderRadius: "10px",
   fontSize: 12,
-  fontFamily: "monospace",
-  padding: "10px 12px",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+  fontFamily: "var(--font-geist-mono, monospace)",
+  padding: "10px 13px",
+  boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
 } as const;
 
-const LABEL_STYLE   = { color: "#9ca3af" } as const;
-const LEGEND_STYLE  = { fontSize: 11 } as const;
+const LABEL_STYLE   = { color: "#4b5563", fontSize: 10 } as const;
+const LEGEND_STYLE  = { fontSize: 11, paddingTop: 4 } as const;
 const MARGIN        = { top: 4, right: 4, left: 0, bottom: 0 } as const;
-const TICK_STYLE    = { fontSize: 10, fill: "#6b7280" } as const;
-const TICK_MONO     = { fontSize: 10, fill: "#6b7280", fontFamily: "monospace" } as const;
-const REFLINE_STYLE = { strokeDasharray: "3 3" };
+const TICK_STYLE    = { fontSize: 10, fill: "#4b5563" } as const;
+const TICK_MONO     = { fontSize: 10, fill: "#4b5563", fontFamily: "var(--font-geist-mono, monospace)" } as const;
 
-// ── Formatters (stable module-level functions) ────────────────────────────────
+// ── Formatters ────────────────────────────────────────────────────────────────
 
 function legendFormatter(v: string) {
   return v === "strategy" ? "RL Strategy" : "Buy & Hold";
@@ -51,19 +52,10 @@ function yTickFormatter(v: number) {
   return fmt(v, "currency", 0);
 }
 
-// ── Custom tooltip — shows price (close), equity, B&H equity, and drawdown ───
-//
-// Recharts passes the `payload` array for the active data point and the raw
-// `label` (the XAxis dataKey value = date string).  We supplement with the
-// drawdown at that date by looking it up in the drawdownMap passed via closure.
+// ── Custom tooltip ─────────────────────────────────────────────────────────────
 
 function makeTooltipContent(drawdownMap: Map<string, number>) {
-  // Return a stable component reference so Recharts doesn't remount on each
-  // render.  We rebuild when drawdownMap identity changes (i.e. on data load),
-  // which is fine — that's not a hot path.
-  return function CrosshairTooltipContent(
-    props: TooltipContentProps,
-  ) {
+  return function CrosshairTooltipContent(props: TooltipContentProps) {
     const { active, payload, label } = props;
     if (!active || !payload?.length) return null;
 
@@ -73,25 +65,31 @@ function makeTooltipContent(drawdownMap: Map<string, number>) {
 
     return (
       <div style={TOOLTIP_STYLE}>
-        <p className="mb-1.5 font-mono text-[10px] text-muted-foreground">{label}</p>
-        <table className="border-separate border-spacing-y-0.5 text-xs">
+        <p style={{ color: "#6b7280", fontSize: 10, marginBottom: 8, letterSpacing: "0.05em" }}>
+          {label}
+        </p>
+        <table style={{ borderCollapse: "separate", borderSpacing: "0 3px" }}>
           <tbody>
             {strategy !== undefined && (
               <tr>
-                <td className="pr-3 text-indigo-400">Strategy</td>
-                <td className="text-right font-mono text-foreground">{fmt(strategy, "currency", 2)}</td>
+                <td style={{ paddingRight: 12, color: "#818cf8" }}>Strategy</td>
+                <td style={{ textAlign: "right", color: "#e4e8f0", fontWeight: 600 }}>
+                  {fmt(strategy, "currency", 2)}
+                </td>
               </tr>
             )}
             {buyAndHold !== undefined && (
               <tr>
-                <td className="pr-3 text-orange-400">Buy &amp; Hold</td>
-                <td className="text-right font-mono text-foreground">{fmt(buyAndHold, "currency", 2)}</td>
+                <td style={{ paddingRight: 12, color: "#fb923c" }}>Buy &amp; Hold</td>
+                <td style={{ textAlign: "right", color: "#e4e8f0", fontWeight: 600 }}>
+                  {fmt(buyAndHold, "currency", 2)}
+                </td>
               </tr>
             )}
             {drawdown !== undefined && (
               <tr>
-                <td className="pr-3 text-red-400">Drawdown</td>
-                <td className="text-right font-mono text-red-400">
+                <td style={{ paddingRight: 12, color: "#f87171" }}>Drawdown</td>
+                <td style={{ textAlign: "right", color: "#f87171", fontWeight: 600 }}>
                   {(drawdown * 100).toFixed(2)}%
                 </td>
               </tr>
@@ -105,39 +103,50 @@ function makeTooltipContent(drawdownMap: Map<string, number>) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function EquityChart({ data, drawdownMap }: Props) {
+export function EquityChart({ data, drawdownMap, height = 240 }: Props) {
   const hoveredDate = useChartStore((s) => s.hoveredDate);
 
-  // Stable tooltip renderer — only rebuilt when drawdownMap reference changes
-  // (happens on data load, not on crosshair move).
-  const tooltipContent = makeTooltipContent(drawdownMap);
+  if (data.length === 0) {
+    return (
+      <div
+        style={{ height }}
+        className="flex items-center justify-center text-sm text-muted-foreground"
+      >
+        No equity data for this date range.
+      </div>
+    );
+  }
+
+  const tooltipContent = useMemo(() => makeTooltipContent(drawdownMap), [drawdownMap]);
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
+    <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={MARGIN}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="rgba(255,255,255,0.04)"
+          vertical={false}
+        />
         <XAxis
           dataKey="date"
           tick={TICK_STYLE}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
+          minTickGap={60}
         />
         <YAxis
           tick={TICK_MONO}
           tickLine={false}
           axisLine={false}
           tickFormatter={yTickFormatter}
-          width={62}
+          width={64}
         />
         <Tooltip
           content={tooltipContent}
           labelStyle={LABEL_STYLE}
-          // Show the native Recharts tooltip only when the crosshair is NOT
-          // driven by the lightweight-charts sync (i.e. user is hovering this
-          // chart directly).  When hoveredDate is set, disable the built-in
-          // active detection so ReferenceLine drives the visual instead.
           active={hoveredDate ? false : undefined}
+          cursor={{ stroke: "rgba(255,255,255,0.08)", strokeWidth: 1 }}
         />
         <Legend
           formatter={legendFormatter}
@@ -146,13 +155,12 @@ export function EquityChart({ data, drawdownMap }: Props) {
           wrapperStyle={LEGEND_STYLE}
         />
 
-        {/* Synced reference line driven by the lightweight-charts crosshair */}
         {hoveredDate && (
           <ReferenceLine
             x={hoveredDate}
-            stroke="rgba(255,255,255,0.25)"
+            stroke="rgba(255,255,255,0.18)"
             strokeWidth={1}
-            strokeDasharray={REFLINE_STYLE.strokeDasharray}
+            strokeDasharray="4 3"
           />
         )}
 
@@ -162,17 +170,17 @@ export function EquityChart({ data, drawdownMap }: Props) {
           stroke="#6366f1"
           strokeWidth={2}
           dot={false}
-          activeDot={{ r: 3 }}
+          activeDot={{ r: 4, fill: "#6366f1", stroke: "#0e0e1a", strokeWidth: 2 }}
           isAnimationActive={false}
         />
         <Line
           type="monotone"
           dataKey="buyAndHold"
           stroke="#f97316"
-          strokeWidth={2}
+          strokeWidth={1.5}
           strokeDasharray="5 3"
           dot={false}
-          activeDot={{ r: 3 }}
+          activeDot={{ r: 4, fill: "#f97316", stroke: "#0e0e1a", strokeWidth: 2 }}
           isAnimationActive={false}
         />
       </LineChart>
